@@ -1,15 +1,37 @@
 
 
+import Pagination from '@/components/pagination'
 import Sidebar from '@/components/sidebar'
 import deleteProduct from '@/lib/actions/products'
 import { getcurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import React from 'react'
 
-const InventoryPage = async ({}) => {
+const InventoryPage = async ({searchParams}:{searchParams:Promise<{q?:string,page?:string}>}) => {
     const user = await getcurrentUser()
     const userId = user.id
-    const tatolProduct= await prisma.product.findMany({where:{userId}})
+
+    const params= await searchParams
+    const q = (params.q ?? "").trim()
+
+    const where= {
+        userId, 
+        ...(q?{name:{contains:q, mode:"insensitive" as const}}: {})
+    }
+    /* const tatolProduct= await prisma.product.findMany({where}) */
+    const pageSize=5;
+    
+    const page = Math.max(1, Number(params.page ?? 1))
+    const  [totalCount,items]= await Promise.all([
+        prisma.product.count({where}),
+        prisma.product.findMany({
+            where,
+            orderBy:{createdAt:"desc"},
+            skip: (page-1) *pageSize,
+            take:pageSize,
+        })
+    ])
+    const totalPages = Math.max(1, Math.ceil(totalCount/pageSize))
   return (
     <div className='min-h-screen bg-gray-50'>InventoryPage
     <Sidebar currentPath='/inventory' />
@@ -24,10 +46,15 @@ const InventoryPage = async ({}) => {
 
             </div>
         </div>
+        
 
         <div className='space-y-6'>
-
-
+        {/* sraech bar */}
+        <div className='bg-white rounded-lg border border-gray-200 p-6'><form action="/inventory" method='GET' className='flex gap-2 '>
+        <input type="text" name='q' placeholder='search product ...' className='flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:border-transparent' />
+        <button className='px-6 py-2 bg-purple-600 rounded-lg text-white hover:bg-purple-900'>Search</button>
+        </form>
+        </div>
         {/* product table */}
         <div className='bg-white rounded-lg border border-gray-200 overflow-hidden'>
             <table className='w-full'>
@@ -43,7 +70,7 @@ const InventoryPage = async ({}) => {
 
                 </thead>
                 <tbody className='bg-white divide-y divide-gray-200'>
-                {tatolProduct.map((product,key)=>(
+                {items.map((product,key)=>(
                     <tr key={key} className='hover:bg-gray-50'>
                         <td className='px-6 py-4 text-sm text-gray-500'>{product.name}</td>
                         <td className='px-6 py-4 text-sm text-gray-500'>{product.sku || '-'}</td>
@@ -62,6 +89,10 @@ const InventoryPage = async ({}) => {
                 </tbody>
             </table>
         </div>
+        {totalPages >1 && <div className='bg-white rounded-lg border border-gray-200 p-6'>
+            {/* Pagination */}
+            <Pagination currentPage={page} totalPages={totalPages} baseUrl='/inventory' searchParams={{q,pageSize:String(pageSize)}}/>
+        </div> }
         </div>
 
     </main>
