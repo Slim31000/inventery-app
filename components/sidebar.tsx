@@ -5,7 +5,7 @@ import { UserButton } from '@stackframe/stack'
 const Sidebar = ({currentPath='/dashboard'}:{currentPath:string}) => {
     const navigation=[
         {name:"Dashboard", href:"/dashboard", icon: BarChart3},
-        {name:"Invontory", href:"/invontory", icon: Package},
+        {name:"Inventory", href:"/inventory", icon: Package},
         {name:"Add product", href:"/add-product", icon: Plus},
         {name:"Settings", href:"/settings", icon: Settings}]
   return (
